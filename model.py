@@ -108,7 +108,7 @@ def save_model(model, filename):
 def run_model(model, filename):
     """ Run model """
     BATCH_SIZE = 128
-    EPOCH = 1
+    EPOCH = 32
     train_size, validation_size = prepare_log()
     train_generator = generator(train_file, BATCH_SIZE)
     validation_generator = generator(validation_file, BATCH_SIZE)
