@@ -61,7 +61,14 @@ def prepare_log():
     from sklearn.model_selection import train_test_split
     tryouts = find_tryouts(data_dir, try_prefix)
     log_frames = list(map(lambda t: load_log(t, log_file, img_dir), tryouts))
-    merged_log = merge_logs(log_frames)
+
+    #add records for flipped images
+    log = merge_logs(log_frames)
+    rev_log = log.copy()
+    log['r'] = True
+    rev_log['r'] = False
+    merged_log = merge_logs(log, rev_log)
+
     merged_log = merged_log.reindex(np.random.permutation(merged_log.index))
     train_samples, validation_samples = train_test_split(merged_log, test_size=0.2)
     train_samples = train_samples.reindex(np.random.permutation(train_samples.index))
@@ -83,6 +90,9 @@ def generator(file_name, batch_size):
             for row in chunk.itertuples():
                 img = cv2.imread(row.center)
                 ang = float(row.angle)
+                if row.r:
+                    img = np.fliplr(img)
+                    ang = -ang
                 images.append(img)
                 angles.append(ang)
             
@@ -135,7 +145,7 @@ def run_model(model):
 def main():
     m_name = 'model.h5'
     m = create_model()
-    run_model(m, m_name) 
+    run_model(m) 
     save_model(m, m_name)  
 
 
