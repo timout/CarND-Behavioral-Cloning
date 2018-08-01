@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import io, os
 import functools
+import pickle
 import pandas as pd
 
 import sklearn
@@ -62,12 +63,12 @@ def prepare_log():
     tryouts = find_tryouts(data_dir, try_prefix)
     log_frames = list(map(lambda t: load_log(t, log_file, img_dir), tryouts))
 
-    #add records for flipped images
+    #add records for flipped images, simple duplication
     log = merge_logs(log_frames)
     rev_log = log.copy()
-    log['r'] = True
-    rev_log['r'] = False
-    merged_log = merge_logs(log, rev_log)
+    log['r'] = False
+    rev_log['r'] = True
+    merged_log = merge_logs([log, rev_log])
 
     merged_log = merged_log.reindex(np.random.permutation(merged_log.index))
     train_samples, validation_samples = train_test_split(merged_log, test_size=0.2)
@@ -90,7 +91,8 @@ def generator(file_name, batch_size):
             for row in chunk.itertuples():
                 img = cv2.imread(row.center)
                 ang = float(row.angle)
-                if row.r:
+                # if reverse flag is true flip the image
+                if row.r: 
                     img = np.fliplr(img)
                     ang = -ang
                 images.append(img)
@@ -100,23 +102,25 @@ def generator(file_name, batch_size):
             y_train = np.array(angles)
             yield sklearn.utils.shuffle(X_train, y_train)
 
-def resize_img(img):
-    import tensorflow as tf  # drive.py requirement
-    return tf.image.resize_images(img, (80, 160))
-
 def create_model():
     """ Create model """
     model = Sequential([
-        Lambda(resize_img, input_shape=(160, 320, 3)),
-        Lambda(lambda x: x/127.5 - 1.),
-        Convolution2D(16, (5, 5), activation='relu', padding="same"),
+        Lambda(lambda x: x/127.5 - 1., input_shape=(160, 320, 3)),
+        Cropping2D(cropping=((70, 25), (0, 0))),
+        Convolution2D(24, (5, 5), activation='relu'),
         MaxPooling2D((2,2)),
-        Convolution2D(32, (5, 5), activation='relu', padding="same"),
+        Convolution2D(36, (5, 5), activation='relu'),
         MaxPooling2D((2,2)),
-        Dropout(0.5),
+        Convolution2D(48, (5, 5), activation='relu'),
+        MaxPooling2D((2,2)),
+        Convolution2D(64, (3, 3), activation='relu'),
         Flatten(),
-        Dense(100, activation='relu'),
-        Dense(50, activation='relu'),
+        Dropout(.2),
+        Dense(100),
+        Dropout(.2),
+        Dense(50),
+        Dropout(.2),
+        Dense(10),
         Dense(1)
     ])
     model.compile(optimizer="adam", loss="mse", metrics=['accuracy'])   
@@ -130,23 +134,30 @@ def save_model(model, filename):
 
 def run_model(model):
     """ Run model """
-    BATCH_SIZE = 128
-    EPOCH = 32
+    BATCH_SIZE = 64
+    EPOCH = 8
     train_size, validation_size = prepare_log()
     train_generator = generator(train_file, BATCH_SIZE)
     validation_generator = generator(validation_file, BATCH_SIZE)
-    model.fit_generator(train_generator, 
+    return model.fit_generator(train_generator, 
                         steps_per_epoch=train_size/BATCH_SIZE, 
                         validation_data=validation_generator, 
                         validation_steps=validation_size/BATCH_SIZE, 
-                        epochs=EPOCH)
+                        epochs=EPOCH,
+                        verbose=1)                   
     
+def save_history(history, history_file):
+    """ Save model metrics """
+    with open(history_file, 'wb') as f:
+        pickle.dump(history.history, f)      
 
 def main():
     m_name = 'model.h5'
+    history_file = 'run_history'
     m = create_model()
-    run_model(m) 
+    history = run_model(m) 
     save_model(m, m_name)  
+    save_history(history, history_file)
 
 
 if __name__ == '__main__':
