@@ -1,4 +1,5 @@
 data/
+res*/
 *.tar.gz
 .git
 .ipynb_checkpoints
