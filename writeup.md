@@ -30,6 +30,7 @@ The goals / steps of this project are the following:
 
 * `model.py`: Python script to import data, train model and save model.
 * `model.h5`: Saved model.
+* `video.mp4`: Saved video from model testing.
 * `drive.py`: Python script that tells the car in the simulator how to drive
 * `test.ipynb`: Notebook I used for model developing. Contains multiple models to test.
 * `writeup.md` report summarizing the results
@@ -38,16 +39,18 @@ The goals / steps of this project are the following:
 
 Data was generated using Udacity's Car-Driving Simulator.  
 To capture good driving behavior, I recorded:
-* Aproximatelly two laps on track one using center lane driving.  
-* Aproximatelly two laps on track one using center lane driving but in oposite direction.  
-* Aproximatelly four laps with recovering from the left and right sides of the road back to center. 
+* Approximately two laps on track one using center lane driving.  
+* Approximately two laps on track one using center lane driving but in opposite direction.  
+* Approximately two laps with recovering from the left and right sides of the road back to center. 
 * In order to increase the dataset, images were flipped on the y-axis and multiplied their steering angle by -1. 
 
 Here is an example image of center lane driving:
 
 ![image example][image1]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to drive back to the center of the road if it swerved to the side. These images show what a recovery looks like from left side to center:
+I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would 
+learn to drive back to the center of the road if it swerved to the side. These images show what a recovery looks like from left 
+side to center:
 
 ![image example][image2]
 ![image example][image3]
@@ -76,13 +79,23 @@ Finally the data set was randomly shuffled and 20% of the data were put into a v
 
 ### Training
 
-For training, I used an adam optimizer so that manually training the learning rate wasn't necessary. For the loss function, I used Mean Squared Error in order to penalize large deviances from the target. The model trained quickly and efficiently with a decreasing validation loss in every epoch.  
+Using simulator it was very easy to make a mistake save 'poor quality' driving data so I decided to store training data by saving it 
+using multiple smaller tryouts. So to prepare data every tryout was was loaded from it is own directory ('data/tryNN'), 
+csv files were merged into one DataFrame with paths fixed and that DataFrame was shuffled and split (80%/20/5) to training and validation sets.  
+To reduce memory consumption I used 'generator' with 'load by chunks' functionality:  
+``` chunk_iter = pd.read_csv(file_name, chunksize=batch_size) ```  
+
+For training, I used an adam optimizer so that manually training the learning rate wasn't necessary. As the loss function, 
+I used Mean Squared Error in order to penalize large deviances from the target. The model trained efficiently with a 
+decreasing validation loss in every epoch.  
 
 ##### Model Architecture
 
-This model architecture was the product of trial and error. I tried multiple different models from very simple with hundreds of parameters to large one with millions of parameters. I end up with adoptation of NVidia model with relativelly big number of trainable parameters: 535,291.  
+This model architecture was a product of multiple trials. I tried several different models from very simple with hundreds of parameters 
+to large one with millions of parameters. I end up with adaptation of NVidia example model with relatively big number of 
+trainable parameters: 535,291.  
 
-The final model architecture:  
+The final model architecture: 
 ```python
 ...
     Lambda(lambda x: x/127.5 - 1., input_shape=(160, 320, 3)),
@@ -119,8 +132,8 @@ Details:
 		<td><ul>
 				<li>Filters: 24</li>
 				<li>Kernel: 5 x 5</li>
-				<li>Pooling: 2 x 2</li>
 				<li>Activation: RELU</li>
+				<li>Pooling: 2 x 2</li>
 			</ul>
 		</td>
 	</tr>
@@ -128,8 +141,8 @@ Details:
 		<td><ul>
 				<li>Filters: 36</li>
 				<li>Kernel: 5 x 5</li>
-				<li>Pooling: 2 x 2</li>
 				<li>Activation: RELU</li>
+				<li>Pooling: 2 x 2</li>
 			</ul>
 		</td>
 	</tr>
@@ -137,8 +150,8 @@ Details:
 		<td><ul>
 				<li>Filters: 48</li>
 				<li>Kernel: 5 x 5</li>
-				<li>Pooling: 2 x 2</li>
 				<li>Activation: RELU</li>
+				<li>Pooling: 2 x 2</li>
 			</ul>
 		</td>
 	</tr>   
@@ -150,26 +163,26 @@ Details:
 			</ul>
 		</td>
 	</tr>  
-	<tr><td>Flatten layer</td><td><ul></ul></td></tr>
+	<tr><td>Flatten Layer</td><td><ul></ul></td></tr>
+	<tr><td>Dropout Layer 1</td><td><ul><li>Rate: 0.2</li></ul></td></tr>
 	<tr><td>Fully Connected Layer 1</td>
 		<td><ul>
-                <li>Dropout: 0.2</li>
 				<li>Neurons: 100</li>
                 <li>Activation: Linear</li>
 			</ul>
 		</td>
 	</tr>
+	<tr><td>Dropout Layer 2</td><td><ul><li>Rate: 0.2</li></ul></td></tr>
    	<tr><td>Fully Connected Layer 2</td>
 		<td><ul>
-                <li>Dropout: 0.2</li>
 				<li>Neurons: 50</li>
                 <li>Activation: Linear</li>
 			</ul>
 		</td>
 	</tr>
+	<tr><td>Dropout Layer 1</td><td><ul><li>Rate: 0.2</li></ul></td></tr>
 	<tr><td>Fully Connected Layer 3</td>
 		<td><ul>
-                <li>Dropout: 0.2</li>
 				<li>Neurons: 10</li>
                 <li>Activation: Linear</li>
 			</ul>
@@ -188,8 +201,9 @@ Details:
 I started with number of epochs = 3:  
 ![test 1][res_image1]  
 Result was good enough but I decided to see if results can be improved and increased number of epochs to 8.  
-Initial model was without 'dropout' and validation loss started increasing after epoch = 3 and result was not that good. The reason of that, my guess, overfitting.
-To prevent the network from overfitting I added 'dropout' and it allowed to increase number epochs to 8:   
+Initial model was without 'dropout' and validation loss started increasing after epoch = 3 and result was not that good. 
+The reason of that, my guess, over-fitting.
+To prevent the network from over-fitting I added 'dropout' layers and it allowed to increase number epochs to 8:   
 ![mse image][mse_image1]  
 And final result was:  
 ![test 2][res_image2]

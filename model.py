@@ -56,24 +56,27 @@ def merge_logs(dfs):
 
 def prepare_log():
     """ 
-    Load 'driving_log.csv' for every dir merge, shuffle, split by 80/20 for training and validation.
+    Load 'driving_log.csv' for every 'tryNN' dir, merge, shuffle, split by 80/20 for training and validation.
     Save resulted training and validation subsets to separate csv files - for generators
     """ 
     from sklearn.model_selection import train_test_split
     tryouts = find_tryouts(data_dir, try_prefix)
     log_frames = list(map(lambda t: load_log(t, log_file, img_dir), tryouts))
 
-    #add records for flipped images, simple duplication
+    #add records for flipped images, simple duplication, 'r'=True indicate fliiped image
     log = merge_logs(log_frames)
     rev_log = log.copy()
     log['r'] = False
     rev_log['r'] = True
     merged_log = merge_logs([log, rev_log])
 
+    #shuffle
     merged_log = merged_log.reindex(np.random.permutation(merged_log.index))
+    #split
     train_samples, validation_samples = train_test_split(merged_log, test_size=0.2)
     train_samples = train_samples.reindex(np.random.permutation(train_samples.index))
     validation_samples = validation_samples.reindex(np.random.permutation(validation_samples.index))
+    #save to it training and validation sets
     train_samples.to_csv(train_file)
     validation_samples.to_csv(validation_file)
     return len(train_samples), len(validation_samples)
@@ -91,7 +94,7 @@ def generator(file_name, batch_size):
             for row in chunk.itertuples():
                 img = cv2.imread(row.center)
                 ang = float(row.angle)
-                # if reverse flag is true flip the image
+                # if 'r' flag is true flip the image
                 if row.r: 
                     img = np.fliplr(img)
                     ang = -ang
