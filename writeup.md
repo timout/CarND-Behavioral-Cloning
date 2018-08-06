@@ -25,6 +25,9 @@ The goals / steps of this project are the following:
 [res_image1]: img/res1.gif "First test"
 [res_image2]: img/res2.gif "Second test"
 
+[res_2_image1]: img/res_t_2_1_r.gif "2 tracks first test"
+[res_2_image2]: img/res_t_2_2_r.gif "2 tracks second test"
+
 ---
 ### Files Submitted
 
@@ -203,7 +206,30 @@ I started with number of epochs = 3:
 Result was good enough but I decided to see if results can be improved and increased number of epochs to 8.  
 Initial model was without 'dropout' and validation loss started increasing after epoch = 3 and result was not that good. 
 The reason of that, my guess, over-fitting.
-To prevent the network from over-fitting I added 'dropout' layers and it allowed to increase number epochs to 8:   
+To prevent the model from over-fitting I added 'dropout' layers and it allowed me to increase number epochs to 8:   
 ![mse image][mse_image1]  
 And final result was:  
-![test 2][res_image2]
+![test 2][res_image2]  
+
+
+#### Addendum
+ 
+After part 1 was done I decided to try with track 2.
+As training data I used: 
+* Track2: Driving on both lanes in both directions.
+* Track2: Correction driving for both lanes.
+* Previously generated data from Track 1  
+The results was not very succesful.  
+The car was able to be on the road but not in the same lane. The most problematic places were 
+places with bigger gap in the middle line. I created good amount of 'correction' driving data for those
+places and it helped but not as much as I expected.  
+Track 2 files: 
+* `model2.py`: Python script to import data, train model and save model - changed a little bit to simplify testing.  
+* `model2.h5`: Saved model for the track 2.  
+
+Result for the track 1:  
+![test 2 1][res_2_image1]  
+Result for the track 2: 
+![test 2 2][res_2_image2]  
+
+I guess next step will be line detection improvement.
